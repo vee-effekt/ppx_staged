@@ -1,13 +1,18 @@
 (library
- (name ppx_template_runtime)
- (public_name ppx_template.runtime)
- (modules ppx_template_runtime))
+ (name ppx_staged_runtime)
+ (public_name ppx_staged.runtime)
+ (modules ppx_staged_runtime))
 
 (library
- (public_name ppx_template)
- (modules :standard \ ppx_template_runtime)
+ (public_name ppx_staged)
+ (modules :standard \ ppx_staged_runtime)
  (kind ppx_rewriter)
- (ppx_runtime_libraries ppx_template_runtime)
- (libraries core ppxlib)
+ (ppx_runtime_libraries ppx_staged_runtime)
+ (libraries core base_quickcheck base ppxlib)
  (preprocess
   (pps ppxlib.metaquot)))
+
+(env
+ (dev
+  (flags
+   (:standard -g -w "-26-27-32-33-34-37-39"))))

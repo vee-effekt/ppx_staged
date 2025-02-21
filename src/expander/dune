@@ -1,0 +1,4 @@
+(library (name ppx_quickcheck_expander)
+ (public_name ppx_staged.expander)
+ (libraries base ppxlib compiler-libs.common)
+ (preprocess (pps ppxlib.metaquot)))

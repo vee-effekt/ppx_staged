@@ -2,22 +2,33 @@
 
 (generate_opam_files true)
 
-(name ppx_template)
+(name ppx_staged)
 
 (source
  (github johnyob/ppx-template))
 
 (license MIT)
 
-(authors "Alistair O'Brien")
+(authors "Thia Richey")
 
-(maintainers "ajob410@gmail.com")
+(maintainers "lapwing@seas.upenn.edu")
 
 (package
- (name ppx_template)
+ (name ppx_staged)
  (depends
   ocaml
   (dune
    (>= 3.6))
+  (odoc :with-doc)
+  core
+  ppx_jane
+  ppx_assert
+  base
+  base_quickcheck
+  ppx_deriving
   ppxlib
+  alcotest
+   (and
+    :with-test)
+  core_unix
   core))

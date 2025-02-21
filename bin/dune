@@ -1,4 +1,5 @@
 (executable
  (name main)
+ (public_name main)
  (preprocess
-  (pps ppx_template)))
+  (pps ppx_staged)))
