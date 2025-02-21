@@ -5,9 +5,7 @@ open Base_quickcheck
 
 type tree =
   | Leaf of int
-  | Node of int
-  | Name of string
-  | List of int * tree
-[@@deriving stage]
+  | Node of tree * int * tree
+  [@@deriving wh]
 
 let () = Stdio.print_endline "Hello World!"

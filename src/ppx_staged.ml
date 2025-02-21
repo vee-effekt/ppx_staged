@@ -10,19 +10,19 @@ let pp_quoted ppf s = Format.fprintf ppf "`%s`" s
 let raise_errorf ~loc fmt = Location.raise_errorf ~loc ("%s: " ^^ fmt) ppx_namespace
 
 let (_ : Deriving.t) = 
-  Deriving.add "stage" 
+  Deriving.add "wh" 
     ~sig_type_decl
     ~str_type_decl
 
 let (_ : Deriving.t) = 
-  Deriving.add "stage.generator" ~extension:generator_extension
+  Deriving.add "wh.generator" ~extension:generator_extension
 let (_ : Deriving.t) = 
-  Deriving.add "stage.observer" ~extension:observer_extension
+  Deriving.add "wh.observer" ~extension:observer_extension
 let (_ : Deriving.t) = 
-  Deriving.add "stage.shrinker" ~extension:shrinker_extension
+  Deriving.add "wh.shrinker" ~extension:shrinker_extension
 
 let () =
-  List.iter ~f:Reserved_namespaces.reserve [ "stage" ]
+  List.iter ~f:Reserved_namespaces.reserve [ "wh" ]
 
 (*
 let constant_nat =

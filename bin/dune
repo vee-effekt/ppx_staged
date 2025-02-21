@@ -3,7 +3,7 @@
  (public_name main)
  (libraries stdio base fast_gen ppx_staged base_quickcheck base_quickcheck.ppx_quickcheck)
  (preprocess
-  (pps base_quickcheck.ppx_quickcheck)))
+  (pps ppx_staged base_quickcheck.ppx_quickcheck)))
 
 (env
  (dev

@@ -124,7 +124,7 @@ let variant
   | [], clauses | clauses, [] ->
     let pairs = List.filter_map clauses ~f:make_pair in
     [%expr
-      Fast_gen.Staged_generator.choose
+      Ppx_quickcheck_runtime.Base_quickcheck.Generator.weighted_union
         [%e elist ~loc pairs]]
   | recursive_clauses, nonrecursive_clauses ->
     let size_pat, size_expr = gensym "size" loc in
@@ -146,9 +146,10 @@ let variant
              let loc = { (Clause.location clause) with loc_ghost = true } in
              let gen_expr =
                [%expr
-                Fast_gen.Staged_generator.size
+                 Ppx_quickcheck_runtime.Base_quickcheck.Generator.bind
+                   Ppx_quickcheck_runtime.Base_quickcheck.Generator.size
                    ~f:(fun [%p size_pat] ->
-                    Fast_gen.Staged_generator.with_size
+                     Ppx_quickcheck_runtime.Base_quickcheck.Generator.with_size
                        ~size:(Ppx_quickcheck_runtime.Base.Int.pred [%e size_expr])
                        [%e make_generator clause])]
              in
@@ -158,14 +159,14 @@ let variant
     let body =
       [%expr
         let [%p nonrec_pat] =
-          Fast_gen.Staged_generator.choose
+          Ppx_quickcheck_runtime.Base_quickcheck.Generator.weighted_union
             [%e elist ~loc nonrec_exprs]
         and [%p rec_pat] =
-          Fast_gen.Staged_generator.choose
+          Ppx_quickcheck_runtime.Base_quickcheck.Generator.weighted_union
             [%e elist ~loc (nonrec_exprs @ rec_exprs)]
         in
-        Fast_gen.Staged_generator.bind
-          Fast_gen.Staged_generator.size
+        Ppx_quickcheck_runtime.Base_quickcheck.Generator.bind
+          Ppx_quickcheck_runtime.Base_quickcheck.Generator.size
           ~f:(function
             | 0 -> [%e nonrec_expr]
             | _ -> [%e rec_expr])]
