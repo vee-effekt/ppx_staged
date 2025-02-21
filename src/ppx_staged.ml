@@ -2,12 +2,26 @@ open! Core
 open! Ppxlib
 open! Ast_builder.Default
 open! StdLabels
+open! Ppx_staged_expander
 
 let ppx_namespace = "ppx_staged"
 let pp_quoted ppf s = Format.fprintf ppf "`%s`" s
 let raise_errorf ~loc fmt = Location.raise_errorf ~loc ("%s: " ^^ fmt) ppx_namespace
 
+let (_ : Deriving.t) = 
+  Deriving.add "wh" 
+    ~sig_type_decl
+    ~str_type_decl
 
+let (_ : Deriving.t) = 
+  Deriving.add "wh.generator" ~extension:generator_extension
+let (_ : Deriving.t) = 
+  Deriving.add "wh.observer" ~extension:observer_extension
+let (_ : Deriving.t) = 
+  Deriving.add "wh.shrinker" ~extension:shrinker_extension
+
+let () =
+  List.iter ~f:Reserved_namespaces.reserve [ "stage" ]
 
 (*
 let constant_nat =
