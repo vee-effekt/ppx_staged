@@ -21,9 +21,12 @@
    (>= 3.6))
   (odoc :with-doc)
   core
+  fast_gen
   ppx_jane
   ppx_assert
   base
+  stdio
+  fast_gen
   base_quickcheck
   ppx_deriving
   ppxlib

@@ -13,7 +13,7 @@ let custom_extension ~loc tag payload =
 
 let generator_attribute =
   Attribute.declare
-    "quickcheck.generator"
+    "wh.generator"
     Attribute.Context.core_type
     Ast_pattern.(pstr (pstr_eval __ nil ^:: nil))
     (fun x -> x)

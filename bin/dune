@@ -1,5 +1,11 @@
 (executable
  (name main)
  (public_name main)
+ (libraries stdio base fast_gen ppx_staged base_quickcheck base_quickcheck.ppx_quickcheck)
  (preprocess
-  (pps ppx_staged)))
+  (pps base_quickcheck.ppx_quickcheck)))
+
+(env
+ (dev
+  (flags
+   (:standard -g -w "-26-27-32-33-34-37-39"))))

@@ -3,22 +3,23 @@ open! Ppxlib
 open! Ast_builder.Default
 open! StdLabels
 open! Ppx_staged_expander
+open Fast_gen.Staged_generator
 
 let ppx_namespace = "ppx_staged"
 let pp_quoted ppf s = Format.fprintf ppf "`%s`" s
 let raise_errorf ~loc fmt = Location.raise_errorf ~loc ("%s: " ^^ fmt) ppx_namespace
 
 let (_ : Deriving.t) = 
-  Deriving.add "wh" 
+  Deriving.add "stage" 
     ~sig_type_decl
     ~str_type_decl
 
 let (_ : Deriving.t) = 
-  Deriving.add "wh.generator" ~extension:generator_extension
+  Deriving.add "stage.generator" ~extension:generator_extension
 let (_ : Deriving.t) = 
-  Deriving.add "wh.observer" ~extension:observer_extension
+  Deriving.add "stage.observer" ~extension:observer_extension
 let (_ : Deriving.t) = 
-  Deriving.add "wh.shrinker" ~extension:shrinker_extension
+  Deriving.add "stage.shrinker" ~extension:shrinker_extension
 
 let () =
   List.iter ~f:Reserved_namespaces.reserve [ "stage" ]

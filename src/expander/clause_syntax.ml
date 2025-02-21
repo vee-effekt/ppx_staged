@@ -22,7 +22,7 @@ module Variant = struct
 
   let weight_attribute =
     Attribute.declare
-      "quickcheck.weight"
+      "wh.weight"
       Attribute.Context.constructor_declaration
       Ast_pattern.(pstr (pstr_eval __ nil ^:: nil))
       (fun x -> x)
@@ -30,7 +30,7 @@ module Variant = struct
 
   let do_not_generate_attribute =
     Attribute.declare
-      "quickcheck.do_not_generate"
+      "wh.do_not_generate"
       Attribute.Context.constructor_declaration
       Ast_pattern.(pstr nil)
       ()
@@ -106,7 +106,7 @@ module Polymorphic_variant = struct
 
   let weight_attribute =
     Attribute.declare
-      "quickcheck.weight"
+      "wh.weight"
       Attribute.Context.rtag
       Ast_pattern.(pstr (pstr_eval __ nil ^:: nil))
       (fun x -> x)
@@ -114,7 +114,7 @@ module Polymorphic_variant = struct
 
   let do_not_generate_attribute =
     Attribute.declare
-      "quickcheck.do_not_generate"
+      "wh.do_not_generate"
       Attribute.Context.rtag
       Ast_pattern.(pstr nil)
       ()
