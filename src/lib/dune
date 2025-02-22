@@ -1,0 +1,16 @@
+(library
+(preprocess (pps ppx_jane))
+ (foreign_stubs
+  (language c)
+  (names common random_stub sr_random_stub)) 
+ (libraries unix splittable_random dynlink metaocaml base)
+ (flags :standard -linkall)
+ (name ppx_staged_lib)
+ (public_name ppx_staged.lib)
+ )
+(include_subdirs unqualified)
+
+(env
+ (dev
+  (flags
+   (:standard -g -w "-26-27-32-33-34-37-39"))))

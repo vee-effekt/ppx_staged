@@ -1,0 +1,11 @@
+This directory includes an interface for RNG codegen, and three different implementations.
+
+The interface (`Random_intf.S`) defines an RNG as a type `t`, as well as *staged* functions like `bool : t code -> bool code` for sampling.
+
+- The first implementation (`sr_random.ml`) is the simplest, defining `t = Splittable_random.State.t`, and implementing all of the functions as quoted versions of the splittable random samplers. Note that `Splittable_random.State.t = {mutable seed : int64; odd_gamma : int64}` is a record with two *boxed* int64 fields.
+
+- The next imlementation, (`c_random.ml`) implements the splitmix algorithm with a state consisting of unboxed ints. It has `t = {mutable seed : int64#; odd_gamma: int64#}`. Because this is not a JS branch of OCaml (and so we lack unboxed types), we cannot actually define this type internally, and so must leave `t` opaque, and define all of the functions using the C FFI. These definitions are in `random_stub.c`, and are imported to OCaml with the file `c_random_runtime.ml`.
+
+- The last implementation (`c_sr_droppin_random.ml`) implements the same algorithm, with `t = Splittable_random.State.t`, but does all of the arithmetic using unboxed ints. To implement splitmix this way, we repeatedly in-place mutate the underlying `int64_t` value in a `Splittable_random.State.t = {mutable seed : int64; odd_gamma : int64}` *without* re-allocating the box. This is not safe ocaml. The fact that the seed is mutable means that the *box* is mutable, but the underlying int is still an immutable custom block. Oh well. This saves us one allocation at the start of running each generator (where in `c_random.ml` we have to convert a `Splittable_random.State.t` into the internal representation by allocating a record with unboxed fields), so maybe it's worth it!
+
+Each implementation generates code with different dependencies: `sr_random.ml` emits code that requires `splittable_random` to build, and the other two require the c stubs to build. For this reason, the random interface also includes a list of strings, which are paths to the CMIs required to compile the code that the interface's functions generate.
