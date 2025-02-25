@@ -2,38 +2,6 @@ open! Import
 open! Ppx_staged_staging;;
 open! Modules;;
 
-let arrow
-      ~generator_of_core_type
-      ~observer_of_core_type
-      ~loc
-      ~arg_label
-      ~input_type
-      ~output_type
-  =
-  let input_observer =
-    match arg_label with
-    | Nolabel | Labelled _ -> observer_of_core_type input_type
-    | Optional _ ->
-      [%expr
-        Ppx_quickcheck_runtime.Base_quickcheck.Observer.option
-          [%e observer_of_core_type input_type]]
-  in
-  let output_generator = generator_of_core_type output_type in
-  let unlabelled =
-    [%expr
-      Ppx_quickcheck_runtime.Base_quickcheck.Generator.fn
-        [%e input_observer]
-        [%e output_generator]]
-  in
-  match arg_label with
-  | Nolabel -> unlabelled
-  | Labelled _ | Optional _ ->
-    [%expr
-      Ppx_quickcheck_runtime.Base_quickcheck.Generator.map
-        ~f:[%e fn_map_label ~loc ~from:Nolabel ~to_:arg_label]
-        [%e unlabelled]]
-;;
-
 let compound_generator ~loc ~make_compound_expr generator_list =
   let loc = { loc with loc_ghost = true } in
   let size_pat, size_expr = gensym "size" loc in

@@ -32,14 +32,7 @@ let rec generator_of_core_type core_type ~gen_env ~obs_env =
          constr
          (List.map args ~f:(generator_of_core_type ~gen_env ~obs_env))
      | Ptyp_var tyvar -> Environment.lookup gen_env ~loc ~tyvar
-     | Ptyp_arrow (arg_label, input_type, output_type) ->
-       Ppx_generator_expander.arrow
-         ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
-         ~observer_of_core_type:(observer_of_core_type ~gen_env ~obs_env)
-         ~loc
-         ~arg_label
-         ~input_type
-         ~output_type
+     | Ptyp_arrow (arg_label, input_type, output_type) -> unsupported ~loc "Arrow types are not supported, %s" (short_string_of_core_type core_type)
      | Ptyp_tuple fields ->
        Ppx_generator_expander.compound
          ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
