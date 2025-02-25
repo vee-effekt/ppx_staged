@@ -16,11 +16,7 @@ let (_ : Deriving.t) =
 
 let (_ : Deriving.t) = 
   Deriving.add "wh.generator" ~extension:generator_extension
-let (_ : Deriving.t) = 
-  Deriving.add "wh.observer" ~extension:observer_extension
-let (_ : Deriving.t) = 
-  Deriving.add "wh.shrinker" ~extension:shrinker_extension
-
+  
 let () =
   List.iter ~f:Reserved_namespaces.reserve [ "wh" ]
 

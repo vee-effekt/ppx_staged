@@ -179,87 +179,6 @@ let generator_impl type_decl ~rec_names =
   { loc; typ; pat; var; exp }
 ;;
 
-let observer_impl type_decl ~rec_names:_ =
-  let loc = type_decl.ptype_loc in
-  let typ =
-    combinator_type_of_type_declaration type_decl ~f:(fun ~loc ty ->
-      [%type: [%t ty] Ppx_quickcheck_runtime.Base_quickcheck.Observer.t])
-  in
-  let pat = pobserver type_decl.ptype_name in
-  let var = eobserver type_decl.ptype_name in
-  let exp =
-    let pat_list, `Covariant obs_env, `Contravariant gen_env =
-      Environment.create_with_variance
-        ~loc
-        ~covariant:"observer"
-        ~contravariant:"generator"
-        type_decl.ptype_params
-    in
-    let body =
-      match type_decl.ptype_kind with
-      | Ptype_open -> unsupported ~loc "open type"
-      | Ptype_variant clauses ->
-        Ppx_observer_expander.variant
-          ~observer_of_core_type:(observer_of_core_type ~obs_env ~gen_env)
-          ~loc
-          ~clauses
-          (module Clause_syntax.Variant)
-      | Ptype_record fields ->
-        Ppx_observer_expander.compound
-          ~observer_of_core_type:(observer_of_core_type ~obs_env ~gen_env)
-          ~loc
-          ~fields
-          (module Field_syntax.Record)
-      | Ptype_abstract ->
-        (match type_decl.ptype_manifest with
-         | Some core_type -> observer_of_core_type core_type ~obs_env ~gen_env
-         | None -> unsupported ~loc "abstract type")
-    in
-    List.fold_right pat_list ~init:body ~f:(fun pat body ->
-      [%expr fun [%p pat] -> [%e body]])
-  in
-  { loc; typ; pat; var; exp }
-;;
-
-let shrinker_impl type_decl ~rec_names:_ =
-  let loc = type_decl.ptype_loc in
-  let typ =
-    combinator_type_of_type_declaration type_decl ~f:(fun ~loc ty ->
-      [%type: [%t ty] Ppx_quickcheck_runtime.Base_quickcheck.Shrinker.t])
-  in
-  let pat = pshrinker type_decl.ptype_name in
-  let var = eshrinker type_decl.ptype_name in
-  let exp =
-    let pat_list, env =
-      Environment.create ~loc ~prefix:"shrinker" type_decl.ptype_params
-    in
-    let body =
-      match type_decl.ptype_kind with
-      | Ptype_open -> unsupported ~loc "open type"
-      | Ptype_variant clauses ->
-        Ppx_shrinker_expander.variant
-          ~shrinker_of_core_type:(shrinker_of_core_type ~env)
-          ~loc
-          ~variant_type:[%type: _]
-          ~clauses
-          (module Clause_syntax.Variant)
-      | Ptype_record fields ->
-        Ppx_shrinker_expander.compound
-          ~shrinker_of_core_type:(shrinker_of_core_type ~env)
-          ~loc
-          ~fields
-          (module Field_syntax.Record)
-      | Ptype_abstract ->
-        (match type_decl.ptype_manifest with
-         | Some core_type -> shrinker_of_core_type core_type ~env
-         | None -> unsupported ~loc "abstract type")
-    in
-    List.fold_right pat_list ~init:body ~f:(fun pat body ->
-      [%expr fun [%p pat] -> [%e body]])
-  in
-  { loc; typ; pat; var; exp }
-;;
-
 let close_the_loop ~of_lazy decl impl =
   let loc = impl.loc in
   let exp = impl.var in
@@ -352,23 +271,6 @@ let generator_impl_list decls ~loc ~rec_flag =
     ~impl:generator_impl
 ;;
 
-let observer_impl_list decls ~loc ~rec_flag =
-  maybe_mutually_recursive
-    decls
-    ~loc
-    ~rec_flag
-    ~of_lazy:[%expr Ppx_quickcheck_runtime.Base_quickcheck.Observer.of_lazy]
-    ~impl:observer_impl
-;;
-
-let shrinker_impl_list decls ~loc ~rec_flag =
-  maybe_mutually_recursive
-    decls
-    ~loc
-    ~rec_flag
-    ~of_lazy:[%expr Ppx_quickcheck_runtime.Base_quickcheck.Shrinker.of_lazy]
-    ~impl:shrinker_impl
-;;
 
 let intf type_decl ~f ~covar ~contravar =
   let covar =
@@ -406,12 +308,8 @@ let intf type_decl ~f ~covar ~contravar =
   psig_value ~loc (value_description ~loc ~name ~type_ ~prim:[])
 ;;
 
-let shrinker_intf = intf ~f:shrinker_name ~covar:"Shrinker" ~contravar:"Shrinker"
 let generator_intf = intf ~f:generator_name ~covar:"Generator" ~contravar:"Observer"
-let observer_intf = intf ~f:observer_name ~covar:"Observer" ~contravar:"Generator"
 let generator_intf_list type_decl_list = List.map type_decl_list ~f:generator_intf
-let observer_intf_list type_decl_list = List.map type_decl_list ~f:observer_intf
-let shrinker_intf_list type_decl_list = List.map type_decl_list ~f:shrinker_intf
 
 let try_include_decl type_decl_list ~loc =
   match type_decl_list with
@@ -439,25 +337,15 @@ let sig_type_decl =
     match try_include_decl ~loc decls with
     | Some decl -> [ decl ]
     | None ->
-      generator_intf_list decls @ observer_intf_list decls @ shrinker_intf_list decls)
+      generator_intf_list decls)
 ;;
 
 let str_type_decl =
   Deriving.Generator.make_noarg (fun ~loc ~path:_ (rec_flag, decls) ->
     let rec_flag = really_recursive rec_flag decls in
-    generator_impl_list ~loc ~rec_flag decls
-    @ observer_impl_list ~loc ~rec_flag decls
-    @ shrinker_impl_list ~loc ~rec_flag decls)
+    generator_impl_list ~loc ~rec_flag decls)
 ;;
 
 let generator_extension ~loc:_ ~path:_ core_type =
   generator_of_core_type core_type ~gen_env:Environment.empty ~obs_env:Environment.empty
-;;
-
-let observer_extension ~loc:_ ~path:_ core_type =
-  observer_of_core_type core_type ~obs_env:Environment.empty ~gen_env:Environment.empty
-;;
-
-let shrinker_extension ~loc:_ ~path:_ core_type =
-  shrinker_of_core_type core_type ~env:Environment.empty
 ;;
