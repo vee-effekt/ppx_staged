@@ -7,7 +7,7 @@ open Modules;;
 
 type variant = 
     Single of string 
-  | Pair of string * string [@@deriving quickcheck]
+  | Pair of string * string [@@deriving wh]
 
 let () =
   let gen = quickcheck_generator_variant in
