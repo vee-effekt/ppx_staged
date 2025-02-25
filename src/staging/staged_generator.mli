@@ -13,5 +13,6 @@ module MakeStaged(R : Random_intf.S) : sig
     module MakeSplit(X : Splittable.S) : sig
         val split : X.t c -> X.f t
     end
+
 end
 

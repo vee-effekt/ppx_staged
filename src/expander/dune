@@ -1,5 +1,5 @@
 (library (name ppx_staged_expander)
  (public_name ppx_staged.expander)
- (libraries base ppxlib fast_gen compiler-libs.common base_quickcheck ppx_staged.runtime ppx_staged.lib)
- (ppx_runtime_libraries ppx_staged.runtime ppx_staged.lib)
+ (libraries base ppxlib fast_gen compiler-libs.common base_quickcheck ppx_staged.runtime ppx_staged.staging)
+ (ppx_runtime_libraries ppx_staged.runtime ppx_staged.staging)
  (preprocess (pps ppxlib.metaquot)))

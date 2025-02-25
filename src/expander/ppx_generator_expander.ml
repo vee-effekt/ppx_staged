@@ -1,4 +1,6 @@
 open! Import
+open! Ppx_staged_staging;;
+open! Modules;;
 
 let arrow
       ~generator_of_core_type
@@ -165,8 +167,8 @@ let variant
           Ppx_quickcheck_runtime.Base_quickcheck.Generator.weighted_union
             [%e elist ~loc (nonrec_exprs @ rec_exprs)]
         in
-        Ppx_quickcheck_runtime.Base_quickcheck.Generator.bind
-          Ppx_quickcheck_runtime.Base_quickcheck.Generator.size
+        Modules.G_SR.bind
+          Modules.G_SR.size
           ~f:(function
             | 0 -> [%e nonrec_expr]
             | _ -> [%e rec_expr])]

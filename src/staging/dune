@@ -5,8 +5,8 @@
   (names common random_stub sr_random_stub)) 
  (libraries unix splittable_random dynlink metaocaml base)
  (flags :standard -linkall)
- (name ppx_staged_lib)
- (public_name ppx_staged.lib)
+ (name ppx_staged_staging)
+ (public_name ppx_staged.staging)
  )
 (include_subdirs unqualified)
 
