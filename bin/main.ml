@@ -8,6 +8,6 @@ open Modules;;
 type tree =
   | Leaf of int
   | Node of tree * int * tree
-  [@@deriving quickcheck]
+  [@@deriving wh]
 
 let () = Stdio.print_endline "Hello World!"

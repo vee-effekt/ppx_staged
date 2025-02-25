@@ -56,7 +56,7 @@ let float ~lo ~hi = Base_quickcheck.Generator.float_uniform_exclusive lo hi
 (* let float ~lo ~hi = Base_quickcheck.Generator.float_uniform_exclusive lo hi *)
 let bool = Base_quickcheck.Generator.bool
 let size = Base_quickcheck.Generator.size
-let with_size g ~size_c = Base_quickcheck.Generator.with_size ~size:size_c g
+let with_size g ~size = Base_quickcheck.Generator.with_size ~size:size g
 
 type ('a,'r) recgen = 'r -> 'a t
 let recurse f = f

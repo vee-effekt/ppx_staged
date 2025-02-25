@@ -5,7 +5,7 @@ open Codecps;;
 
 module MakeStaged(R : Random_intf.S) = struct
 
-  type 'a t = { rand_gen : size_c:(int code) -> random_c:(R.t code) -> 'a Codecps.t }
+  type 'a t = { rand_gen : size:(int code) -> random_c:(R.t code) -> 'a Codecps.t }
 
   module R = R
 
@@ -21,29 +21,29 @@ module MakeStaged(R : Random_intf.S) = struct
   type 'a c = 'a C.t
   (* type 'a recgen = (unit -> 'a Core.Quickcheck.Generator.t) code *)
 
-  let return x = { rand_gen = fun ~size_c:_ ~random_c:_ -> Codecps.return x }
+  let return x = { rand_gen = fun ~size:_ ~random_c:_ -> Codecps.return x }
 
   (*
   Ideally, we would really rather have this bind perform a let-insertion to ensure that effect order
   is *always* preserved. I.e. bind would look like:
   ```
-  Codecps.bind (r.rand_gen ~size_c ~random_c) @@ fun a ->
+  Codecps.bind (r.rand_gen ~size ~random_c) @@ fun a ->
     Codecps.bind (Codecps.let_insert a) @@ fun a ->
-        (f a).rand_gen ~size_c ~random_c
+        (f a).rand_gen ~size ~random_c
   ```
   In this way, we would ensure that in the generated code we *always* run the effectful computation `r` before
   passing the result to the continuation, rather than just substituting the code for `r` into the place that `f` uses its argumetn.
   But for type reasons, this doesn't work. In order to do "the trick",
-  we must have that `type 'a t = { rand_gen : size_c:(int code) -> random_c:(R.t code) -> 'a Codecps.t }`
-  and not `type 'a t = { rand_gen : size_c:(int code) -> random_c:(R.t code) -> 'a code Codecps.t }` (note the `code` in the result type).
+  we must have that `type 'a t = { rand_gen : size:(int code) -> random_c:(R.t code) -> 'a Codecps.t }`
+  and not `type 'a t = { rand_gen : size:(int code) -> random_c:(R.t code) -> 'a code Codecps.t }` (note the `code` in the result type).
   This prevents us from adding a let-insert.
 
   So, in order to ensure that effects happen in the right order, we are very careful to ensure that any library combinator that
   might perform effects (or recursion) has a Codecps.let_insert at the top level, so that it hits the bind in the same way.
   *)
-  let bind (r : 'a t) ~(f : 'a -> 'b t) = { rand_gen = fun ~size_c ~random_c ->
-    Codecps.bind (r.rand_gen ~size_c ~random_c) (fun a ->
-        (f a).rand_gen ~size_c ~random_c
+  let bind (r : 'a t) ~(f : 'a -> 'b t) = { rand_gen = fun ~size ~random_c ->
+    Codecps.bind (r.rand_gen ~size ~random_c) (fun a ->
+        (f a).rand_gen ~size ~random_c
     )
   }
 
@@ -80,20 +80,20 @@ module MakeStaged(R : Random_intf.S) = struct
 
   let bool : bool code t = {
     rand_gen =
-      fun ~size_c:_ ~random_c ->
+      fun ~size:_ ~random_c ->
         (* adding these let-inserts here ensures that the effects happen in order of the binds. *)
         Codecps.let_insert (R.bool random_c)
   }
 
   let int ~(lo : int code) ~(hi : int code) : int code t = {
     rand_gen =
-      fun ~size_c:_ ~random_c ->
+      fun ~size:_ ~random_c ->
         Codecps.let_insert (R.int random_c ~lo:lo ~hi:hi)
   }
 
   let float ~(lo : float code) ~(hi : float code) : float code t = {
     rand_gen =
-      fun ~size_c:_ ~random_c ->
+      fun ~size:_ ~random_c ->
         (* if lower_inclusive > upper_inclusive
           then
             raise_s
@@ -108,17 +108,17 @@ module MakeStaged(R : Random_intf.S) = struct
 
   let rec genpick n ws =
     match ws with
-    | [] -> { rand_gen = fun ~size_c:_ ~random_c:_ -> Codecps.return .< failwith "Fell of the end of pick list" >. }
+    | [] -> { rand_gen = fun ~size:_ ~random_c:_ -> Codecps.return .< failwith "Fell of the end of pick list" >. }
     | (k,g) :: ws' ->
           { rand_gen = 
-            fun ~size_c ~random_c ->
+            fun ~size ~random_c ->
               Codecps.bind (Codecps.split_bool .< Float.compare .~(v2c n) .~(v2c k) <= 0 >.) (fun leq ->
                 if leq then
-                  g.rand_gen ~size_c ~random_c
+                  g.rand_gen ~size ~random_c
                 else
                   Codecps.bind (Codecps.let_insertv .< .~(v2c n) -. .~(v2c k) >.) @@ fun n' ->
                   (* let%bind n' =  in *)
-                  (genpick n' ws').rand_gen ~size_c ~random_c
+                  (genpick n' ws').rand_gen ~size ~random_c
             )
           }
 
@@ -136,16 +136,16 @@ module MakeStaged(R : Random_intf.S) = struct
       go ws zero
 
   let weighted_union ws : 'a t =
-    { rand_gen = fun ~size_c ~random_c ->
+    { rand_gen = fun ~size ~random_c ->
         Codecps.bind (Codecps.all @@ List.map (fun (cn,g) -> Codecps.bind (Codecps.let_insertv cn) @@ fun cvn -> Codecps.return (cvn,g)) ws) @@ fun ws' ->
         (* let%bind ws' =  in *)
         Codecps.bind (sum ws') @@ fun sum ->
         (* let%bind sum = sum ws' in *)
-        Codecps.bind ((float ~lo:.<0.>. ~hi:(v2c sum)).rand_gen ~size_c ~random_c) @@ fun n ->
+        Codecps.bind ((float ~lo:.<0.>. ~hi:(v2c sum)).rand_gen ~size ~random_c) @@ fun n ->
         (* let%bind n =  in *)
         Codecps.bind (Codecps.let_insertv n) @@ fun n ->
         (* let%bind n = Codecps.let_insert n in *)
-        (genpick n ws').rand_gen ~size_c ~random_c
+        (genpick n ws').rand_gen ~size ~random_c
     }
 
 
@@ -155,11 +155,11 @@ module MakeStaged(R : Random_intf.S) = struct
       match xs with
       | [] -> failwith "empty list!"
       | [x] -> return x
-      | x::xs -> { rand_gen = fun ~size_c ~random_c ->
+      | x::xs -> { rand_gen = fun ~size ~random_c ->
           Codecps.bind (Codecps.split_bool .< .~i == 0 >.) @@ fun b ->
           if b then Codecps.return x else
             Codecps.bind (Codecps.let_insert .< .~i - 1 >.) @@ fun i_pred ->
-              (go i_pred xs).rand_gen ~size_c ~random_c
+              (go i_pred xs).rand_gen ~size ~random_c
         }
     in
     bind (int ~lo:.<0>. ~hi:.<n>.) ~f:(fun i ->
@@ -180,24 +180,24 @@ module MakeStaged(R : Random_intf.S) = struct
         >.
       in
     {
-    rand_gen = fun ~size_c ~random_c ->
+    rand_gen = fun ~size ~random_c ->
       Codecps.bind (Codecps.let_insert cxs) @@ fun cxs ->
       Codecps.bind (Codecps.let_insert .<List.length .~cxs - 1>.) @@ fun n ->
-      Codecps.bind ((int ~lo:.<0>. ~hi:.<.~n>.).rand_gen ~size_c ~random_c) @@ fun i ->
+      Codecps.bind ((int ~lo:.<0>. ~hi:.<.~n>.).rand_gen ~size ~random_c) @@ fun i ->
       Codecps.return .<
         if .~n < 0 then failwith "of_list_dn passed empty list" else .~of_list_dyn_loop .~cxs .~i
       >.
   }
 
-  let with_size f ~size_c =
-    { rand_gen = fun ~size_c:_ ~random_c -> f.rand_gen ~size_c:size_c ~random_c }
+  let with_size f ~size =
+    { rand_gen = fun ~size:_ ~random_c -> f.rand_gen ~size:size ~random_c }
 
-  let size = { rand_gen = fun ~size_c ~random_c:_ -> Codecps.return size_c }
+  let size = { rand_gen = fun ~size ~random_c:_ -> Codecps.return size }
 
   let to_fun sg = 
     let f = sg.rand_gen in
     .< fun ~size ~random ->
-        .~(Codecps.code_generate (f ~size_c:.< size >. ~random_c:.< random >.))
+        .~(Codecps.code_generate (f ~size:.< size >. ~random_c:.< random >.))
     >.
 
   let to_bq sg =
@@ -205,13 +205,14 @@ module MakeStaged(R : Random_intf.S) = struct
       Base_quickcheck.Generator.create (fun ~size ~random ->
         .~(
             let local_random = genlet (R.of_sr .<random>.) in
-            Codecps.code_generate (sg.rand_gen ~size_c:.<size>. ~random_c:local_random)
+            Codecps.code_generate (sg.rand_gen ~size:.<size>. ~random_c:local_random)
           )
       )
     >.
 
   let print sg = Codelib.print_code Format.std_formatter (to_bq sg)
   
+
   let jit ?extra_cmi_paths cde =
     List.flatten (Option.to_list extra_cmi_paths) |> List.iter Runnative.add_search_path;
     List.iter Runnative.add_search_path R.dep_paths;
@@ -219,25 +220,25 @@ module MakeStaged(R : Random_intf.S) = struct
 
   type ('a,'r) recgen = 'r code -> 'a code t
   let recurse f x = {
-    rand_gen = fun ~size_c ~random_c ->
-      Codecps.bind ((f x).rand_gen ~size_c ~random_c) @@ fun c ->
+    rand_gen = fun ~size ~random_c ->
+      Codecps.bind ((f x).rand_gen ~size ~random_c) @@ fun c ->
       Codecps.let_insert c
   }
 
   let recursive (type a) (type r) (x0 : r code) (step : (a,r) recgen -> r code -> a code t) =
     {
-      rand_gen = fun ~size_c ~random_c -> 
+      rand_gen = fun ~size ~random_c -> 
         Codecps.bind (Codecps.let_insertv x0) @@ fun x0 ->
         (* let%bind x0 = Codecps.let_insert x0 in *)
         Codecps.let_insert @@ .< let rec go x ~size ~random = .~(
             Codecps.code_generate @@
               (step
-                  (fun xc' -> { rand_gen = fun ~size_c ~random_c -> Codecps.return .< go .~xc' ~size:.~size_c ~random:.~random_c >. })
+                  (fun xc' -> { rand_gen = fun ~size ~random_c -> Codecps.return .< go .~xc' ~size:.~size ~random:.~random_c >. })
                   .<x>.
-              ).rand_gen ~size_c:.<size>. ~random_c:.<random>.
+              ).rand_gen ~size:.<size>. ~random_c:.<random>.
           )
           in
-            go .~(v2c x0) ~size:.~size_c ~random:.~random_c
+            go .~(v2c x0) ~size:.~size ~random:.~random_c
         >.
     }
 
@@ -246,28 +247,28 @@ module MakeStaged(R : Random_intf.S) = struct
   *)
 
   let split_bool cb = {
-    rand_gen = fun ~size_c:_ ~random_c:_ -> Codecps.split_bool cb
+    rand_gen = fun ~size:_ ~random_c:_ -> Codecps.split_bool cb
   }
 
   let split_pair cp = {
-    rand_gen = fun ~size_c:_ ~random_c:_ -> Codecps.split_pair cp
+    rand_gen = fun ~size:_ ~random_c:_ -> Codecps.split_pair cp
   }
 
   let split_triple ct = {
-    rand_gen = fun ~size_c:_ ~random_c:_ -> Codecps.split_triple ct
+    rand_gen = fun ~size:_ ~random_c:_ -> Codecps.split_triple ct
   }
 
   let split_list cxs = {
-    rand_gen = fun ~size_c:_ ~random_c:_ -> Codecps.split_list cxs
+    rand_gen = fun ~size:_ ~random_c:_ -> Codecps.split_list cxs
   }
 
   let split_option cxs = {
-    rand_gen = fun ~size_c:_ ~random_c:_ -> Codecps.split_option cxs
+    rand_gen = fun ~size:_ ~random_c:_ -> Codecps.split_option cxs
   }
 
   module MakeSplit(X : Splittable.S) = struct
     let split cx = {
-      rand_gen = fun ~size_c:_ ~random_c:_ -> X.split cx
+      rand_gen = fun ~size:_ ~random_c:_ -> X.split cx
     }
   end
 end
