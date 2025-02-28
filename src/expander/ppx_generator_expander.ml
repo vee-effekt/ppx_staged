@@ -26,12 +26,14 @@ let compound_generator ~loc ~make_compound_expr generator_list =
 
 let compound_generator_new generator_list =
   match generator_list with
-  | [x; y] -> G_SR.bind G_SR.bool ~f:(fun x ->
-      G_SR.bind G_SR.bool ~f:(fun y ->
-        G_SR.return (G_SR.C.pair x y)
+  | [x] -> G_SR.bind x ~f:(fun x' -> G_SR.return x)
+  | [x; y] -> G_SR.bind x ~f:(fun x' ->
+      G_SR.bind y ~f:(fun y' ->
+        G_SR.return (G_SR.C.pair x' y')
       )
     )
-  | _ -> G_SR.return (G_SR.C.pair .< false >. .< false >.)
+  | [x; y; z] -> G_SR.bind x ~f:(fun x' -> G_SR.bind y ~f:(fun y' -> G_SR.bind z (fun z' -> return G_SR.cons x' (G_SR.cons y' z'))))
+  | _ -> unsupported ""
 ;;
 
 let compound_new

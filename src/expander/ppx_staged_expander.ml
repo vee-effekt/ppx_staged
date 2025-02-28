@@ -4,9 +4,9 @@ open! Modules;;
 
 let compound_generator_new generator_list =
   match generator_list with
-  | [x; y] -> G_SR.bind G_SR.bool ~f:(fun x ->
-      G_SR.bind G_SR.bool ~f:(fun y ->
-        G_SR.return (G_SR.C.pair x y)
+  | [x; y] -> G_SR.bind x ~f:(fun x' ->
+      G_SR.bind y ~f:(fun y' ->
+        G_SR.return (G_SR.C.pair x' y')
       )
     )
   | _ -> G_SR.return (G_SR.C.pair .< false >. .< false >.)
@@ -41,6 +41,21 @@ let generator_attribute =
     (fun x -> x)
 ;;
 
+let rec generator_of_core_type core_type ~gen_env ~obs_env =
+  match Attribute.get generator_attribute core_type with
+  | Some expr -> unsupported ~loc:core_type.ptyp_loc "Unsupported type: %s" (short_string_of_core_type core_type)
+  | None ->
+    match core_type.ptyp_desc with
+    | Ptyp_tuple fields -> 
+        compound_new
+          ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
+          ~fields
+          (module Field_syntax.Tuple)
+    | _ -> 
+        unsupported ~loc:core_type.ptyp_loc "Unsupported type: %s" 
+          (short_string_of_core_type core_type)
+
+(*
 let rec generator_of_core_type core_type ~gen_env ~obs_env =
   let loc = { core_type.ptyp_loc with loc_ghost = true } in
   match Attribute.get generator_attribute core_type with
@@ -85,6 +100,7 @@ let rec generator_of_core_type core_type ~gen_env ~obs_env =
      | Ptyp_alias _
      | Ptyp_poly _
      | Ptyp_package _ -> unsupported ~loc "%s" (short_string_of_core_type core_type))
+*)
 
 type impl =
   { loc : location
@@ -322,7 +338,6 @@ let sig_type_decl =
   Deriving.Generator.make_noarg (fun ~loc ~path:_ (_, decls) ->
     List.map decls ~f:generator_intf)
 ;;
-
 
 let str_type_decl =
   Deriving.Generator.make_noarg (fun ~loc ~path:_ (rec_flag, decls) ->

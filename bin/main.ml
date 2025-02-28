@@ -6,13 +6,12 @@ open Ppx_staged_expander;;
 (* open Base_quickcheck;; *)
 open Modules;;
 
-
-let quickcheck_generator_int = Modules.G_SR.int
-let quickcheck_generator_bool = Modules.G_SR.bool
-let quickcheck_generator_float = Modules.G_SR.float
+type staged_int = int [@wh.generator G_SR.int ~lo:.<0>. ~hi:.<100>.]
+type staged_bool = bool [@wh.generator G_SR.bool]
+type staged_float = float [@wh.generator G_SR.float ~lo:.<0.0>. ~hi:.<1.0>.]
 
 module Pair = struct 
-  type t = bool * bool [@@deriving wh, sexp]
+  type t = staged_bool * staged_bool [@@deriving wh, sexp]
 end
 
 let () =
