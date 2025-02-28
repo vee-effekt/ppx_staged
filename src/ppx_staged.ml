@@ -13,9 +13,6 @@ let (_ : Deriving.t) =
     ~sig_type_decl
     ~str_type_decl
 
-let (_ : Deriving.t) = 
-  Deriving.add "wh.generator" ~extension:generator_extension
-
 (*
 let (_: Deriving.t) = 
   Deriving.add "wh.jit" ~extension:jit_extension

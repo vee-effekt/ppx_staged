@@ -1,4 +1,26 @@
 open! Import
+open! Ppx_staged_staging;;
+open! Modules;;
+
+let compound_generator_new generator_list =
+  match generator_list with
+  | [x; y] -> G_SR.bind G_SR.bool ~f:(fun x ->
+      G_SR.bind G_SR.bool ~f:(fun y ->
+        G_SR.return (G_SR.C.pair x y)
+      )
+    )
+  | _ -> G_SR.return (G_SR.C.pair .< false >. .< false >.)
+;;
+
+let compound_new
+      (type field)
+      ~generator_of_core_type
+      ~fields
+      (module Field : Field_syntax.S with type ast = field)
+  =
+  let fields = List.map fields ~f:Field.create in 
+  compound_generator_new
+      (List.map fields ~f:(fun field -> generator_of_core_type (Field.core_type field)))
 
 let custom_extension ~loc tag payload =
   match String.equal tag.txt "custom" with
@@ -33,7 +55,10 @@ let rec generator_of_core_type core_type ~gen_env ~obs_env =
          (List.map args ~f:(generator_of_core_type ~gen_env ~obs_env))
      | Ptyp_var tyvar -> Environment.lookup gen_env ~loc ~tyvar
      | Ptyp_arrow (arg_label, input_type, output_type) -> unsupported ~loc "Arrow types are not supported, %s" (short_string_of_core_type core_type)
-     | Ptyp_tuple fields -> [%expr ()]
+     | Ptyp_tuple fields -> compound_new
+        ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
+        ~fields
+        (module Field_syntax.Tuple)
      (*
        Ppx_generator_expander.compound
          ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
@@ -314,8 +339,3 @@ let str_type_decl =
             ~expr:[%expr fun _ -> failwith "Not implemented"] ] ])
 ;;
 *)
-
-let generator_extension ~loc:_ ~path:_ core_type =
-  generator_of_core_type core_type ~gen_env:Environment.empty ~obs_env:Environment.empty
-;;
-

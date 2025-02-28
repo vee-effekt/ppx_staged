@@ -24,16 +24,26 @@ let compound_generator ~loc ~make_compound_expr generator_list =
                     ])]
 ;;
 
-(*
-let compound_generator ~loc ~make_compound_expr generator_list =
+let compound_generator_new generator_list =
   match generator_list with
-  | [x; y] ->
-      let x = G_SR.bind x in
-      let y = G_SR.bind y in
-      G_SR.return .< (.~x, .~y) >.
-  | _ -> failwith "Expected exactly two elements in generator_list"
+  | [x; y] -> G_SR.bind G_SR.bool ~f:(fun x ->
+      G_SR.bind G_SR.bool ~f:(fun y ->
+        G_SR.return (G_SR.C.pair x y)
+      )
+    )
+  | _ -> G_SR.return (G_SR.C.pair .< false >. .< false >.)
 ;;
-*)
+
+let compound_new
+      (type field)
+      ~generator_of_core_type
+      ~fields
+      (module Field : Field_syntax.S with type ast = field)
+  =
+  let fields = List.map fields ~f:Field.create in 
+  compound_generator
+      (List.map fields ~f:(fun field -> generator_of_core_type (Field.core_type field)))
+
 
 let compound
       (type field)
@@ -48,6 +58,7 @@ let compound
     ~make_compound_expr:(Field.expression fields)
     (List.map fields ~f:(fun field -> generator_of_core_type (Field.core_type field)))
 ;;
+
 
 let does_refer_to name_set =
   object (self)

@@ -3,7 +3,7 @@ open Base
 open Ppx_staged
 open Ppx_staged_staging;;
 open Ppx_staged_expander;;
-open Base_quickcheck;;
+(* open Base_quickcheck;; *)
 open Modules;;
 
 
