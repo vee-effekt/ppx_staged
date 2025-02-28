@@ -33,12 +33,14 @@ let rec generator_of_core_type core_type ~gen_env ~obs_env =
          (List.map args ~f:(generator_of_core_type ~gen_env ~obs_env))
      | Ptyp_var tyvar -> Environment.lookup gen_env ~loc ~tyvar
      | Ptyp_arrow (arg_label, input_type, output_type) -> unsupported ~loc "Arrow types are not supported, %s" (short_string_of_core_type core_type)
-     | Ptyp_tuple fields ->
+     | Ptyp_tuple fields -> [%expr ()]
+     (*
        Ppx_generator_expander.compound
          ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
          ~loc
          ~fields
          (module Field_syntax.Tuple)
+      *)
      | Ptyp_variant (clauses, Closed, None) -> unsupported ~loc "Variant types are not supported, %s" (short_string_of_core_type core_type)
       (*
        Ppx_generator_expander.variant
@@ -86,7 +88,8 @@ let generator_impl type_decl ~rec_names =
     let body =
       match type_decl.ptype_kind with
       | Ptype_open -> unsupported ~loc "open type"
-      | Ptype_variant clauses ->
+      | Ptype_variant clauses -> unsupported ~loc "variant type"
+        (*
         Ppx_generator_expander.variant
           ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
           ~loc
@@ -94,12 +97,15 @@ let generator_impl type_decl ~rec_names =
           ~clauses
           ~rec_names
           (module Clause_syntax.Variant)
-      | Ptype_record fields ->
+        *)
+      | Ptype_record fields -> unsupported ~loc "field type"
+        (*
         Ppx_generator_expander.compound
           ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
           ~loc
           ~fields
           (module Field_syntax.Record)
+        *)
       | Ptype_abstract ->
         (match type_decl.ptype_manifest with
          | Some core_type -> generator_of_core_type core_type ~gen_env ~obs_env
@@ -292,21 +298,22 @@ let sig_type_decl =
     List.map decls ~f:generator_intf)
 ;;
 
-(*
+
 let str_type_decl =
   Deriving.Generator.make_noarg (fun ~loc ~path:_ (rec_flag, decls) ->
     let rec_flag = really_recursive rec_flag decls in
     generator_impl_list ~loc ~rec_flag decls)
 ;;
-*)
 
+(*
 let str_type_decl =
   Deriving.Generator.make_noarg (fun ~loc ~path:_ (_rec_flag, _decls) ->
     [ pstr_value ~loc Nonrecursive 
         [ value_binding ~loc 
-            ~pat:(ppat_var ~loc { txt = "generator"; loc }) 
+            ~pat:(ppat_var ~loc { txt = (generator_name ""); loc }) 
             ~expr:[%expr fun _ -> failwith "Not implemented"] ] ])
 ;;
+*)
 
 let generator_extension ~loc:_ ~path:_ core_type =
   generator_of_core_type core_type ~gen_env:Environment.empty ~obs_env:Environment.empty

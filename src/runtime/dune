@@ -1,3 +1,4 @@
 (library (name ppx_staged_runtime)
  (public_name ppx_staged.runtime)
- (libraries base base_quickcheck) (preprocess no_preprocessing))
+ (ppx_runtime_libraries ppx_jane ppx_staged.staging)
+ (libraries base base_quickcheck ppx_staged.staging) (preprocess no_preprocessing))
