@@ -24,29 +24,6 @@ let compound_generator ~loc ~make_compound_expr generator_list =
                     ])]
 ;;
 
-let compound_generator_new generator_list =
-  match generator_list with
-  | [x] -> G_SR.bind x ~f:(fun x' -> G_SR.return x)
-  | [x; y] -> G_SR.bind x ~f:(fun x' ->
-      G_SR.bind y ~f:(fun y' ->
-        G_SR.return (G_SR.C.pair x' y')
-      )
-    )
-  | [x; y; z] -> G_SR.bind x ~f:(fun x' -> G_SR.bind y ~f:(fun y' -> G_SR.bind z (fun z' -> return G_SR.cons x' (G_SR.cons y' z'))))
-  | _ -> unsupported ""
-;;
-
-let compound_new
-      (type field)
-      ~generator_of_core_type
-      ~fields
-      (module Field : Field_syntax.S with type ast = field)
-  =
-  let fields = List.map fields ~f:Field.create in 
-  compound_generator
-      (List.map fields ~f:(fun field -> generator_of_core_type (Field.core_type field)))
-
-
 let compound
       (type field)
       ~generator_of_core_type

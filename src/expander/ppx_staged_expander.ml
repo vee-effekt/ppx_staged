@@ -9,7 +9,7 @@ let compound_generator_new generator_list =
         G_SR.return (G_SR.C.pair x' y')
       )
     )
-  | _ -> G_SR.return (G_SR.C.pair .< false >. .< false >.)
+  | _ -> failwith ""
 ;;
 
 let compound_new
@@ -20,18 +20,7 @@ let compound_new
   =
   let fields = List.map fields ~f:Field.create in 
   compound_generator_new
-      (List.map fields ~f:(fun field -> generator_of_core_type (Field.core_type field)))
-
-let custom_extension ~loc tag payload =
-  match String.equal tag.txt "custom" with
-  | false -> unsupported ~loc "unknown extension: %s" tag.txt
-  | true ->
-    (match payload with
-     | PStr [ { pstr_desc = Pstr_eval (expr, attributes); _ } ] ->
-       assert_no_attributes attributes;
-       expr
-     | _ -> invalid ~loc "[%%custom] extension expects a single expression as its payload")
-;;
+      (List.map fields ~f:(fun field -> G_SR.bool))
 
 let generator_attribute =
   Attribute.declare
@@ -42,18 +31,12 @@ let generator_attribute =
 ;;
 
 let rec generator_of_core_type core_type ~gen_env ~obs_env =
-  match Attribute.get generator_attribute core_type with
-  | Some expr -> unsupported ~loc:core_type.ptyp_loc "Unsupported type: %s" (short_string_of_core_type core_type)
-  | None ->
-    match core_type.ptyp_desc with
-    | Ptyp_tuple fields -> 
-        compound_new
-          ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
-          ~fields
-          (module Field_syntax.Tuple)
-    | _ -> 
-        unsupported ~loc:core_type.ptyp_loc "Unsupported type: %s" 
-          (short_string_of_core_type core_type)
+  match core_type.ptyp_desc with
+     | Ptyp_tuple fields -> compound_new
+        ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
+        ~fields
+        (module Field_syntax.Tuple)
+     | _ -> failwith "Only compound types are supported at this time."
 
 (*
 let rec generator_of_core_type core_type ~gen_env ~obs_env =
@@ -107,14 +90,14 @@ type impl =
   ; typ : core_type
   ; pat : pattern
   ; var : expression
-  ; exp : expression
+  ; exp : core_type G_SR.c G_SR.t
   }
 
 let generator_impl type_decl ~rec_names =
   let loc = type_decl.ptype_loc in
   let typ =
     combinator_type_of_type_declaration type_decl ~f:(fun ~loc ty ->
-      [%type: [%t ty] Ppx_quickcheck_runtime.Base_quickcheck.Generator.t])
+      [%type: [%t ty] G_SR.c G_SR.t])
   in
   let pat = pgenerator type_decl.ptype_name in
   let var = egenerator type_decl.ptype_name in
@@ -285,6 +268,7 @@ let intf type_decl ~f ~covar ~contravar =
   in
   psig_value ~loc (value_description ~loc ~name ~type_ ~prim:[])
 ;;
+
 (*
 let generator_intf = intf ~f:generator_name ~covar:"Generator" ~contravar:"Observer"
 let generator_intf_list type_decl_list = List.map type_decl_list ~f:generator_intf
@@ -294,12 +278,10 @@ let generator_intf type_decl =
   let loc = type_decl.ptype_loc in
   let name = loc_map type_decl.ptype_name ~f:generator_name in
 
-  (* Properly create located identifiers with `~loc` *)
   let bool_type = Ast_helper.Typ.constr ~loc { txt = Longident.Lident "bool"; loc } [] in
   let c_type = Ast_helper.Typ.constr ~loc { txt = Longident.Lident "G_SR.c"; loc } [bool_type] in
   let t_type = Ast_helper.Typ.constr ~loc { txt = Longident.Lident "G_SR.t"; loc } [c_type] in
 
-  (* Generate the value signature *)
   psig_value ~loc (value_description ~loc ~name ~type_:t_type ~prim:[])
 ;;
 
