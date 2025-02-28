@@ -1,6 +1,8 @@
 open! Import
 open! Ppx_staged_staging;;
 open! Modules;;
+open! Codelib;;
+
 
 let compound_generator ~loc ~make_compound_expr generator_list =
   let loc = { loc with loc_ghost = true } in
@@ -8,7 +10,7 @@ let compound_generator ~loc ~make_compound_expr generator_list =
   let random_pat, random_expr = gensym "random" loc in
   [%expr
     Ppx_quickcheck_runtime.Base_quickcheck.Generator.create
-      (fun ~size:[%p size_pat] ~random:[%p random_pat] ->
+      (fun ~size:_ ~random:[%p random_pat] ->
          [%e
            make_compound_expr
              ~loc
@@ -17,9 +19,21 @@ let compound_generator ~loc ~make_compound_expr generator_list =
                 [%expr
                   Ppx_quickcheck_runtime.Base_quickcheck.Generator.generate
                     [%e generator]
-                    ~size:[%e size_expr]
-                    ~random:[%e random_expr]]))])]
+                    ~size:0
+                    ~random:[%e random_expr]]))
+                    ])]
 ;;
+
+(*
+let compound_generator ~loc ~make_compound_expr generator_list =
+  match generator_list with
+  | [x; y] ->
+      let x = G_SR.bind x in
+      let y = G_SR.bind y in
+      G_SR.return .< (.~x, .~y) >.
+  | _ -> failwith "Expected exactly two elements in generator_list"
+;;
+*)
 
 let compound
       (type field)
@@ -88,8 +102,5 @@ let variant
   let pairs = List.filter_map clauses ~f:make_pair in
   [%expr
     Ppx_quickcheck_runtime.Base_quickcheck.Generator.weighted_union
-  (*
-    Modules.G_SR.weighted_union
-  *)
       [%e elist ~loc pairs]]
 ;;

@@ -3,7 +3,6 @@ open! Ppxlib
 open! Ast_builder.Default
 open! StdLabels
 open! Ppx_staged_expander
-open Fast_gen.Staged_generator
 
 let ppx_namespace = "ppx_staged"
 let pp_quoted ppf s = Format.fprintf ppf "`%s`" s
@@ -16,7 +15,12 @@ let (_ : Deriving.t) =
 
 let (_ : Deriving.t) = 
   Deriving.add "wh.generator" ~extension:generator_extension
-  
+
+(*
+let (_: Deriving.t) = 
+  Deriving.add "wh.jit" ~extension:jit_extension
+*)
+
 let () =
   List.iter ~f:Reserved_namespaces.reserve [ "wh" ]
 

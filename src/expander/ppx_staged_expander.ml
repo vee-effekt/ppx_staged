@@ -39,7 +39,8 @@ let rec generator_of_core_type core_type ~gen_env ~obs_env =
          ~loc
          ~fields
          (module Field_syntax.Tuple)
-     | Ptyp_variant (clauses, Closed, None) ->
+     | Ptyp_variant (clauses, Closed, None) -> unsupported ~loc "Variant types are not supported, %s" (short_string_of_core_type core_type)
+      (*
        Ppx_generator_expander.variant
          ~generator_of_core_type:(generator_of_core_type ~gen_env ~obs_env)
          ~loc
@@ -47,6 +48,7 @@ let rec generator_of_core_type core_type ~gen_env ~obs_env =
          ~clauses
          ~rec_names:(Set.empty (module String))
          (module Clause_syntax.Polymorphic_variant)
+      *)
      | Ptyp_variant (_, Open, _) -> unsupported ~loc "polymorphic variant type with [>]"
      | Ptyp_variant (_, _, Some _) -> unsupported ~loc "polymorphic variant type with [<]"
      | Ptyp_extension (tag, payload) -> custom_extension ~loc tag payload
@@ -201,7 +203,6 @@ let generator_impl_list decls ~loc ~rec_flag =
     ~impl:generator_impl
 ;;
 
-
 let intf type_decl ~f ~covar ~contravar =
   let covar =
     Longident.parse ("Ppx_quickcheck_runtime.Base_quickcheck." ^ covar ^ ".t")
@@ -237,9 +238,23 @@ let intf type_decl ~f ~covar ~contravar =
   in
   psig_value ~loc (value_description ~loc ~name ~type_ ~prim:[])
 ;;
-
+(*
 let generator_intf = intf ~f:generator_name ~covar:"Generator" ~contravar:"Observer"
 let generator_intf_list type_decl_list = List.map type_decl_list ~f:generator_intf
+*)
+
+let generator_intf type_decl =
+  let loc = type_decl.ptype_loc in
+  let name = loc_map type_decl.ptype_name ~f:generator_name in
+
+  (* Properly create located identifiers with `~loc` *)
+  let bool_type = Ast_helper.Typ.constr ~loc { txt = Longident.Lident "bool"; loc } [] in
+  let c_type = Ast_helper.Typ.constr ~loc { txt = Longident.Lident "G_SR.c"; loc } [bool_type] in
+  let t_type = Ast_helper.Typ.constr ~loc { txt = Longident.Lident "G_SR.t"; loc } [c_type] in
+
+  (* Generate the value signature *)
+  psig_value ~loc (value_description ~loc ~name ~type_:t_type ~prim:[])
+;;
 
 let try_include_decl type_decl_list ~loc =
   match type_decl_list with
@@ -262,6 +277,7 @@ let try_include_decl type_decl_list ~loc =
     None
 ;;
 
+(*
 let sig_type_decl =
   Deriving.Generator.make_noarg (fun ~loc ~path:_ (_, decls) ->
     match try_include_decl ~loc decls with
@@ -269,13 +285,30 @@ let sig_type_decl =
     | None ->
       generator_intf_list decls)
 ;;
+*)
 
+let sig_type_decl =
+  Deriving.Generator.make_noarg (fun ~loc ~path:_ (_, decls) ->
+    List.map decls ~f:generator_intf)
+;;
+
+(*
 let str_type_decl =
   Deriving.Generator.make_noarg (fun ~loc ~path:_ (rec_flag, decls) ->
     let rec_flag = really_recursive rec_flag decls in
     generator_impl_list ~loc ~rec_flag decls)
 ;;
+*)
+
+let str_type_decl =
+  Deriving.Generator.make_noarg (fun ~loc ~path:_ (_rec_flag, _decls) ->
+    [ pstr_value ~loc Nonrecursive 
+        [ value_binding ~loc 
+            ~pat:(ppat_var ~loc { txt = "generator"; loc }) 
+            ~expr:[%expr fun _ -> failwith "Not implemented"] ] ])
+;;
 
 let generator_extension ~loc:_ ~path:_ core_type =
   generator_of_core_type core_type ~gen_env:Environment.empty ~obs_env:Environment.empty
 ;;
+

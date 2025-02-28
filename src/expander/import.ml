@@ -1,7 +1,10 @@
 include Base
 include Ppxlib
 include Ast_builder.Default
-
+open! Ppx_staged_staging;;
+open Codelib;;
+open Base;;
+open Ppxlib;;
 (* errors and error messages *)
 
 let ( ^^ ) = Stdlib.( ^^ )
@@ -62,6 +65,10 @@ let gensym prefix loc =
   let loc = { loc with loc_ghost = true } in
   let sym = gen_symbol ~prefix:("_" ^ prefix) () in
   pvar ~loc sym, evar ~loc sym
+;;
+
+let gensym_symbol prefix =
+  gen_symbol ~prefix:("_" ^ prefix) ()
 ;;
 
 let gensyms prefix loc_list = List.map loc_list ~f:(gensym prefix) |> List.unzip
