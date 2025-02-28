@@ -2,6 +2,72 @@ open! Import
 open! Ppx_staged_staging;;
 open! Modules;;
 
+let compound_generator_new pair =
+  let x, y = pair in
+    G_SR.bind x ~f:(fun x' ->
+      G_SR.bind y ~f:(fun y' ->
+        G_SR.return (G_SR.C.pair x' y')
+      )
+    )
+;;
+
+let rec generator_of_core_type core_type =
+  match core_type.ptyp_desc with
+  | Ptyp_tuple fields -> compound_generator_new((G_SR.bool, G_SR.bool))
+  | _ -> failwith "Only compound (tuple) types are supported."
+;;
+
+type impl =
+  { loc : location
+  ; typ : core_type
+  ; pat : pattern
+  ; var : expression
+  ; exp : core_type G_SR.c G_SR.t
+  }
+
+let generator_impl type_decl =
+  let loc = type_decl.ptype_loc in
+  let typ =
+    combinator_type_of_type_declaration type_decl ~f:(fun ~loc ty ->
+      [%type: [%t ty] G_SR.c G_SR.t])
+  in
+  let pat = pgenerator type_decl.ptype_name in
+  let var = egenerator type_decl.ptype_name in
+  let exp =
+    match type_decl.ptype_kind with
+    | Ptype_record fields -> compound_generator_new((G_SR.bool, G_SR.bool))
+    | Ptype_abstract ->
+      (match type_decl.ptype_manifest with
+       | Some core_type -> generator_of_core_type core_type
+       | None -> failwith "Abstract type without manifest is not supported")
+    | _ -> failwith "Only tuple types are supported"
+  in
+  { loc; typ; pat; var; exp }
+;;
+
+let generator_intf type_decl =
+  let loc = type_decl.ptype_loc in
+  let name = loc_map type_decl.ptype_name ~f:generator_name in
+  let typ =
+    combinator_type_of_type_declaration type_decl ~f:(fun ~loc ty ->
+      [%type: [%t ty] G_SR.c G_SR.t])
+  in
+  psig_value ~loc (value_description ~loc ~name ~type_:typ ~prim:[])
+;;
+
+let sig_type_decl =
+  Deriving.Generator.make_noarg (fun ~loc ~path:_ (_, decls) ->
+    List.map decls ~f:generator_intf)
+;;
+
+let str_type_decl =
+  Deriving.Generator.make_noarg (fun ~loc ~path:_ (_, [decl]) ->
+    let impl = generator_impl decl in
+    [ pstr_value ~loc Nonrecursive
+        [ value_binding ~loc:impl.loc ~pat:impl.pat ~expr:impl.exp ] ])
+;;
+
+(*
 let compound_generator_new generator_list =
   match generator_list with
   | [x; y] -> G_SR.bind x ~f:(fun x' ->
@@ -325,14 +391,5 @@ let str_type_decl =
   Deriving.Generator.make_noarg (fun ~loc ~path:_ (rec_flag, decls) ->
     let rec_flag = really_recursive rec_flag decls in
     generator_impl_list ~loc ~rec_flag decls)
-;;
-
-(*
-let str_type_decl =
-  Deriving.Generator.make_noarg (fun ~loc ~path:_ (_rec_flag, _decls) ->
-    [ pstr_value ~loc Nonrecursive 
-        [ value_binding ~loc 
-            ~pat:(ppat_var ~loc { txt = (generator_name ""); loc }) 
-            ~expr:[%expr fun _ -> failwith "Not implemented"] ] ])
 ;;
 *)
