@@ -24,8 +24,8 @@ let rec generator_of_core_type ~loc core_type =
       let gen_of_type ty =
         match ty.ptyp_desc with
         | Ptyp_constr ({ txt = Lident "bool"; _ }, _) -> [%expr G_SR.bool]
-        | Ptyp_constr ({ txt = Lident "int"; _ }, _) -> [%expr G_SR.int]
-        | Ptyp_constr ({ txt = Lident "float"; _ }, _) -> [%expr G_SR.float]
+        | Ptyp_constr ({ txt = Lident "int"; _ }, _) -> [%expr (G_SR.int ~lo:(G_SR.C.lift 0) ~hi:(G_SR.C.lift 100))]
+        | Ptyp_constr ({ txt = Lident "float"; _ }, _) -> [%expr G_SR.float ~lo:(G_SR.C.lift 0.0) ~hi:(G_SR.C.lift 1.0)]
         | _ -> failwith "Unsupported type in tuple."
       in
       compound_generator_new ~loc (gen_of_type t1, gen_of_type t2)

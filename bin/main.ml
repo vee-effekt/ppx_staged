@@ -7,7 +7,7 @@ open Ppx_staged_expander;;
 open Modules;;
 
 module Pair = struct 
-  type t = bool * bool [@@deriving wh]
+  type t = int * float [@@deriving wh]
 end
 
 let () =
@@ -17,5 +17,5 @@ let random = Splittable_random.State.of_int 5 in
 let size = 10 in
 for _ = 1 to 10 do
   let (b,b') = Base_quickcheck.Generator.generate generator ~size ~random in
-  printf "\n\n%s,%s" (Bool.to_string b) (Bool.to_string b')
+  printf "\n\n%s,%s" (Int.to_string b) (Float.to_string b')
 done
