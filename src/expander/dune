@@ -3,3 +3,8 @@
  (libraries base ppxlib ppx_jane fast_gen compiler-libs.common base_quickcheck ppx_staged.runtime ppx_staged.staging)
  (ppx_runtime_libraries ppx_jane ppx_staged.runtime ppx_staged.staging)
  (preprocess (pps ppxlib.metaquot)))
+
+ (env
+ (dev
+  (flags
+   (:standard -g -w "-26-27-32-33-34-37-39-8-69"))))

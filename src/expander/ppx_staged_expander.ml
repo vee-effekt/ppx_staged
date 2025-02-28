@@ -2,19 +2,34 @@ open! Import
 open! Ppx_staged_staging;;
 open! Modules;;
 
-let compound_generator_new pair =
-  let x, y = pair in
-    G_SR.bind x ~f:(fun x' ->
-      G_SR.bind y ~f:(fun y' ->
+let compound_generator_new ~loc (x, y) =
+  [%expr
+    G_SR.bind [%e x] ~f:(fun x' ->
+      G_SR.bind [%e y] ~f:(fun y' ->
         G_SR.return (G_SR.C.pair x' y')
       )
     )
+  ]
 ;;
 
-let rec generator_of_core_type core_type =
+let rec generator_of_core_type ~loc core_type =
   match core_type.ptyp_desc with
-  | Ptyp_tuple fields -> compound_generator_new((G_SR.bool, G_SR.bool))
-  | _ -> failwith "Only compound (tuple) types are supported."
+  | Ptyp_tuple fields -> compound_generator_new ~loc ([%expr G_SR.bool], [%expr G_SR.bool])
+  | _ -> failwith "Only compound (tuple) types a re supported."
+;;
+
+let rec generator_of_core_type ~loc core_type =
+  match core_type.ptyp_desc with
+  | Ptyp_tuple (t1 :: t2 :: _) -> 
+      let gen_of_type ty =
+        match ty.ptyp_desc with
+        | Ptyp_constr ({ txt = Lident "bool"; _ }, _) -> [%expr G_SR.bool]
+        | Ptyp_constr ({ txt = Lident "int"; _ }, _) -> [%expr G_SR.int]
+        | Ptyp_constr ({ txt = Lident "float"; _ }, _) -> [%expr G_SR.float]
+        | _ -> failwith "Unsupported type in tuple."
+      in
+      compound_generator_new ~loc (gen_of_type t1, gen_of_type t2)
+  | _ -> failwith "Only compound (tuple) types with at least two elements are supported."
 ;;
 
 type impl =
@@ -22,7 +37,7 @@ type impl =
   ; typ : core_type
   ; pat : pattern
   ; var : expression
-  ; exp : core_type G_SR.c G_SR.t
+  ; exp : expression
   }
 
 let generator_impl type_decl =
@@ -35,10 +50,10 @@ let generator_impl type_decl =
   let var = egenerator type_decl.ptype_name in
   let exp =
     match type_decl.ptype_kind with
-    | Ptype_record fields -> compound_generator_new((G_SR.bool, G_SR.bool))
+    | Ptype_record fields -> failwith "Unimpl"
     | Ptype_abstract ->
       (match type_decl.ptype_manifest with
-       | Some core_type -> generator_of_core_type core_type
+       | Some core_type -> generator_of_core_type ~loc:loc core_type
        | None -> failwith "Abstract type without manifest is not supported")
     | _ -> failwith "Only tuple types are supported"
   in
